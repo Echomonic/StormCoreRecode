@@ -1,0 +1,5 @@
+name: StormCoreRecode
+version: '1.0-SNAPSHOT'
+main: net.nethersmp.storm.StormPlugin
+api-version: '1.21'
+load: STARTUP

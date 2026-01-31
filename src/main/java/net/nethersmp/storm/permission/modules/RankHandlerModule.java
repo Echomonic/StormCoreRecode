@@ -1,0 +1,172 @@
+package net.nethersmp.storm.permission.modules;
+
+import com.mojang.brigadier.Command;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
+import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
+import io.papermc.paper.event.player.AsyncChatEvent;
+import lombok.RequiredArgsConstructor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import net.nethersmp.storm.StormPlugin;
+import net.nethersmp.storm.module.api.Module;
+import net.nethersmp.storm.module.api.Result;
+import net.nethersmp.storm.permission.UserRank;
+import net.nethersmp.storm.user.data.UserDataType;
+import net.nethersmp.storm.user.data.UserPunishmentDataType;
+import net.nethersmp.storm.utilities.CommandsModule;
+import net.nethersmp.storm.utilities.ListenerModule;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.permissions.PermissionAttachment;
+
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static com.mojang.brigadier.arguments.StringArgumentType.getString;
+import static com.mojang.brigadier.arguments.StringArgumentType.word;
+import static io.papermc.paper.command.brigadier.Commands.argument;
+import static io.papermc.paper.command.brigadier.Commands.literal;
+
+@RequiredArgsConstructor
+public class RankHandlerModule implements Module<Void> {
+
+
+    private final StormPlugin plugin;
+    private final RankLoaderModule rankLoader;
+    private final ListenerModule events;
+    private final CommandsModule commands;
+
+    private final ConcurrentHashMap<UUID, PermissionAttachment> rankAttachments = new ConcurrentHashMap<>();
+
+    @Override
+    public String id() {
+        return "user_ranks_handler";
+    }
+
+    @Override
+    public Set<String> dependencies() {
+        return Set.of("user_ranks_loader", "listeners");
+    }
+
+    @Override
+    public int priority() {
+        return 970;
+    }
+
+    @Override
+    public Result<Void> load() {
+        events.listen(id(), PlayerJoinEvent.class, event -> {
+            Player player = event.getPlayer();
+
+            Result<String> appliedRank = applyRank(player);
+
+            if (appliedRank.failed())
+                player.sendMessage(appliedRank.toComponent());
+        });
+        events.listen(id(), PlayerQuitEvent.class, event -> {
+            Player player = event.getPlayer();
+            removeRank(player);
+        });
+        events.listen(id(), AsyncChatEvent.class, EventPriority.NORMAL, event -> {
+            if (event.isCancelled()) return;
+            event.setCancelled(true);
+
+            Player player = event.getPlayer();
+
+            //I don't know why I have to do this, Bukkit's event system is ass.
+            if (!UserPunishmentDataType.CURRENT_PUNISHMENT.get(player.getUniqueId()).isEmpty()) return;
+
+            Component message = event.message();
+            getUserRank(player).ifPresent(userRank -> {
+                String prefix = userRank.prefix();
+
+                if (!prefix.isEmpty())
+                    prefix = prefix + " ";
+
+                prefix = prefix + player.getName();
+
+                String rankId = UserDataType.RANK.get(player.getUniqueId());
+                String rankText = "<" + userRank.getColor() + ">" + prefix + "<" + userRank.getEndColor() + ">";
+                String oldMessageString = PlainTextComponentSerializer.plainText().serialize(message);
+                String colonColor = "<" + ("MEMBER".equals(rankId) ? "dark_gray" : "white") + ">";
+                Component updatedMessage = MiniMessage.miniMessage().deserialize(rankText + colonColor + ": " + oldMessageString);
+                event.viewers().forEach(viewer -> viewer.sendMessage(updatedMessage));
+            });
+
+        });
+
+        commands.register(literal("rank").requires(source -> source.getSender().hasPermission("stormcore.rank"))
+                .then(argument("target", ArgumentTypes.player()).then(argument("rank", word()).executes(context -> {
+                    CommandSourceStack source = context.getSource();
+                    CommandSender sender = source.getSender();
+
+                    PlayerSelectorArgumentResolver playerResolver = context.getArgument("target", PlayerSelectorArgumentResolver.class);
+                    final Player target = playerResolver.resolve(context.getSource()).getFirst();
+
+                    String rankId = getString(context, "rank").toUpperCase();
+
+                    rankLoader.getUserRank(rankId).ifPresentOrElse(userRank -> {
+                        UserDataType.RANK.set(target.getUniqueId(), rankId);
+                        sender.sendRichMessage("<gray><green>Updated</green> <yellow>%s</yellow> rank to %s!</gray>".formatted(target.getName(), userRank.getFormattedPrefix()));
+                        removeRank(target);
+
+                        Result<String> appliedRank = applyRank(target);
+                        //Probably the most cursed thing I think I've seen in a while.
+                        (appliedRank.failed() ? sender : target).sendMessage(appliedRank.toComponent());
+
+                    }, () -> {
+                        sender.sendRichMessage("<red>Failed</red> <gray>to <green>update</green> <yellow>%s's</yellow> rank!</gray>".formatted(target.getName()));
+                    });
+
+                    return Command.SINGLE_SUCCESS;
+                })))
+                .build()
+        );
+
+        return Result.success();
+    }
+
+    @Override
+    public void unload() {
+
+    }
+
+    private Result<String> applyRank(Player player) {
+        AtomicReference<Result<String>> appliedRank = new AtomicReference<>(Result.success());
+
+        getUserRank(player).ifPresentOrElse(rank -> {
+            var rankPermissionAttachment = player.addAttachment(plugin);
+            rankAttachments.put(player.getUniqueId(), rankPermissionAttachment);
+
+            for (String permission : rank.permissions()) {
+                rankPermissionAttachment.setPermission(permission, true);
+            }
+            player.recalculatePermissions();
+            player.updateCommands();
+            appliedRank.set(Result.success("<gray><green>Successfully</green> applied</gray> " + rank.getFormattedPrefix()));
+        }, () -> appliedRank.set(Result.fail("RANKS", "Couldn't find '" + player.getUniqueId() + "' rank!")));
+        return appliedRank.get();
+    }
+
+    private void removeRank(Player player) {
+        PermissionAttachment attachment = rankAttachments.remove(player.getUniqueId());
+        if (attachment == null) return;
+
+        player.removeAttachment(attachment);
+        player.recalculatePermissions();
+        player.updateCommands();
+    }
+
+    private Optional<UserRank> getUserRank(Player player) {
+        return rankLoader.getUserRank(UserDataType.RANK.get(player.getUniqueId()));
+    }
+
+}
