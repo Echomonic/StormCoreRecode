@@ -7,7 +7,7 @@ import net.nethersmp.storm.module.api.Result;
 import net.nethersmp.storm.permission.modifiers.EmptyPermissible;
 import net.nethersmp.storm.permission.modifiers.LeafPermissible;
 import net.nethersmp.storm.permission.modifiers.PermissibleFields;
-import net.nethersmp.storm.utilities.ListenerModule;
+import net.nethersmp.storm.utilities.modules.ListenerModule;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;

@@ -114,9 +114,6 @@ public class ModuleLoader implements ModuleAccess {
         return Map.copyOf(warnings);
     }
 
-    // =========================
-    // ModuleAccess
-    // =========================
 
     @Override
     public <T> T require(String id, Class<T> type) {
@@ -131,9 +128,6 @@ public class ModuleLoader implements ModuleAccess {
         return Optional.ofNullable(instances.get(id));
     }
 
-    // =========================
-    // Internals (clean methods)
-    // =========================
 
     private void ensureNotInitialized() {
         if (initialized) throw new IllegalStateException("Cannot register after init()");

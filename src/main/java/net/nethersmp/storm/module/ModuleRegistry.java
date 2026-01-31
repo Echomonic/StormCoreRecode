@@ -10,8 +10,8 @@ import net.nethersmp.storm.permission.modules.RankHandlerModule;
 import net.nethersmp.storm.permission.modules.RankLoaderModule;
 import net.nethersmp.storm.permission.modules.UserPermissionsModule;
 import net.nethersmp.storm.punishment.modules.UserPunishmentModule;
-import net.nethersmp.storm.utilities.CommandsModule;
-import net.nethersmp.storm.utilities.ListenerModule;
+import net.nethersmp.storm.utilities.modules.CommandsModule;
+import net.nethersmp.storm.utilities.modules.ListenerModule;
 
 import java.lang.reflect.Field;
 import java.util.Set;

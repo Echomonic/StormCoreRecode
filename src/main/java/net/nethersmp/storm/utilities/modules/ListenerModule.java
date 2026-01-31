@@ -1,4 +1,4 @@
-package net.nethersmp.storm.utilities;
+package net.nethersmp.storm.utilities.modules;
 
 import lombok.RequiredArgsConstructor;
 import net.nethersmp.storm.StormPlugin;

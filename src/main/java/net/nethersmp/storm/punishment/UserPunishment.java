@@ -9,7 +9,12 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.StringJoiner;
 
-public record UserPunishment(PunishmentId id, PunishmentType type, PunishmentReason reason, PunishmentDuration duration) {
+public record UserPunishment(
+        PunishmentId id,
+        PunishmentType type,
+        PunishmentReason reason,
+        PunishmentDuration duration
+) {
 
     @Override
     @JsonIgnore

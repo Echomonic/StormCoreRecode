@@ -1,0 +1,5 @@
+/.paper-nms/
+/.idea/
+/target/
+/dependency-reduced-pom.xml
+/stormcorerecode.iml

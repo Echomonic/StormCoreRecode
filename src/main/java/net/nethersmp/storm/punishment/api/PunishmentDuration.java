@@ -1,10 +1,14 @@
 package net.nethersmp.storm.punishment.api;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonValue;
 
-@JsonFormat(shape = JsonFormat.Shape.NUMBER)
 public record PunishmentDuration(long future) {
+
+    @JsonValue
+    public long value() {
+        return future;
+    }
 
     @JsonIgnore
     public boolean isOver() {

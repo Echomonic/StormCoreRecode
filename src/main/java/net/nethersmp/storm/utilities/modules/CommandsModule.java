@@ -1,4 +1,4 @@
-package net.nethersmp.storm.utilities;
+package net.nethersmp.storm.utilities.modules;
 
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
