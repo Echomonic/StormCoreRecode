@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,6 +20,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @RequiredArgsConstructor
 public class RankLoaderModule implements Module<Void> {
+
+    public static final String ID = "user_ranks_loader";
+    public static final Set<String> DEPENDENCIES = Set.of();
+    public static final int PRIORITY = 980;
 
     private final Path file;
 
@@ -28,16 +33,6 @@ public class RankLoaderModule implements Module<Void> {
     private final ExecutorService loadingExecutor = Executors.newSingleThreadExecutor();
 
     private final Object lock = new Object();
-
-    @Override
-    public String id() {
-        return "user_ranks_loader";
-    }
-
-    @Override
-    public int priority() {
-        return 980;
-    }
 
     @Override
     public Result<Void> load() {
@@ -75,5 +70,21 @@ public class RankLoaderModule implements Module<Void> {
     @Override
     public void unload() {
         userRanks.clear();
+    }
+
+
+    @Override
+    public String id() {
+        return ID;
+    }
+
+    @Override
+    public int priority() {
+        return PRIORITY;
+    }
+
+    @Override
+    public Set<String> dependencies() {
+        return DEPENDENCIES;
     }
 }

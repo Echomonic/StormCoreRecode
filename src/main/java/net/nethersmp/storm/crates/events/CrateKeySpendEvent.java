@@ -21,7 +21,7 @@ public class CrateKeySpendEvent extends PlayerEvent implements Cancellable {
     @Setter
     private boolean cancelled;
 
-    protected CrateKeySpendEvent(@NotNull Player player, CrateData purchasedCrate) {
+    public CrateKeySpendEvent(@NotNull Player player, CrateData purchasedCrate) {
         super(player);
         this.purchasedCrate = purchasedCrate;
     }

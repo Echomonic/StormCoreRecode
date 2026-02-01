@@ -5,14 +5,14 @@ import dev.triumphteam.gui.components.GuiContainer;
 import dev.triumphteam.gui.components.InteractionModifier;
 import dev.triumphteam.gui.components.util.Legacy;
 import dev.triumphteam.gui.guis.Gui;
-import dev.triumphteam.gui.guis.GuiItem;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.nethersmp.storm.crates.CrateItem;
 import net.nethersmp.storm.crates.api.CrateData;
 import net.nethersmp.storm.crates.storage.CratesDataHandler;
 import net.nethersmp.storm.crates.storage.CratesStorage;
+import net.nethersmp.storm.utilities.Components;
 import net.nethersmp.storm.utilities.Strings;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -35,25 +35,23 @@ public class CrateUserInterface extends Gui {
                 3
         ), edit ? Set.of() : Set.of(InteractionModifier.values()));
         loadItems(crateData, edit);
-
         setCloseGuiAction(event -> {
             if (!edit) return;
             Player player = (Player) event.getPlayer();
             ConcurrentMap<Integer, ItemStack> modifiedItems = new ConcurrentHashMap<>();
             Inventory inventory = event.getInventory();
 
-            if (inventory.isEmpty()) return;
-
             for (int slot = 0; slot < inventory.getSize(); slot++) {
-                GuiItem item = getGuiItem(slot);
+                ItemStack item = inventory.getItem(slot);
                 if (item == null) continue;
+                modifiedItems.put(slot, item);
             }
             crateData.items(modifiedItems);
+            System.out.println(crateData.items());
             storage.add(crateData.name(), crateData);
 
             long time = System.currentTimeMillis();
             cratesDataHandler.write(crateData);
-
             player.sendRichMessage("<gray><green>Successfully saved</green> your changes!</gray> <yellow>%sms</yellow>".formatted(System.currentTimeMillis() - time));
         });
 
@@ -66,10 +64,9 @@ public class CrateUserInterface extends Gui {
                     .asGuiItem());
             if (items.isEmpty()) {
                 setItem(13, ItemBuilder.from(Material.ENDER_CHEST)
-                        .name(Component.text("No items available!", NamedTextColor.RED))
-                        .lore(MiniMessage.miniMessage()
-                                .deserialize(Strings.small("<gray>THIS <yellow>CRATE</yellow> HAS NO</gray>\n<gray>AVAILABLE ITEMS TO VIEW</gray>"))
-                        )
+                        .name(Component.text("No items available!", NamedTextColor.RED).decoration(TextDecoration.ITALIC, false))
+                        .lore(Components.color(Strings.small("<gray>THIS <yellow>CRATE</yellow> HAS NO</gray>")),
+                                Components.color(Strings.small("<gray>AVAILABLE <aqua>ITEMS</aqua> TO VIEW</gray>")))
                         .asGuiItem());
                 return;
             }

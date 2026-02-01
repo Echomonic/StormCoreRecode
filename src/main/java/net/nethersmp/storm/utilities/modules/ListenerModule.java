@@ -10,27 +10,32 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.EventExecutor;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 
 @RequiredArgsConstructor
 public class ListenerModule implements Module<Void> {
 
+    public static final String ID = "listeners";
+    public static final Set<String> DEPENDENCIES = Set.of();
+    public static final int PRIORITY = 1000;
     private final StormPlugin plugin;
 
     private final Map<String, List<Listener>> owned = new HashMap<>();
 
     @Override
     public int priority() {
-        return 1000;
+        return PRIORITY;
     }
 
     @Override
     public String id() {
-        return "listeners";
+        return ID;
+    }
+
+    @Override
+    public Set<String> dependencies() {
+        return DEPENDENCIES;
     }
 
     @Override

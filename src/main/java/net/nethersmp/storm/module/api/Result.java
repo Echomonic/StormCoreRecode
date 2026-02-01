@@ -6,7 +6,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.jspecify.annotations.NonNull;
 
 public sealed interface Result<T> permits Result.Success, Result.Warn, Result.Fail {
-    record Success<T>(String value) implements Result<T> {
+    record Success<T>(T value) implements Result<T> {
         @Override
         public @NonNull String toString() {
             return value.toString();
@@ -73,7 +73,7 @@ public sealed interface Result<T> permits Result.Success, Result.Warn, Result.Fa
         return Result.succeeded(this);
     }
 
-    static <T> Result<T> success(String value) {
+    static <T> Result<T> success(T value) {
         return new Success<>(value);
     }
 

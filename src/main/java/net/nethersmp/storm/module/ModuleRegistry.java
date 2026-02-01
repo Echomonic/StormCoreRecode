@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import net.nethersmp.storm.StormPlugin;
+import net.nethersmp.storm.cooldown.CooldownModule;
+import net.nethersmp.storm.crates.modules.CratesModule;
 import net.nethersmp.storm.module.api.ModuleDefinition;
 import net.nethersmp.storm.permission.modules.RankHandlerModule;
 import net.nethersmp.storm.permission.modules.RankLoaderModule;
@@ -14,7 +16,6 @@ import net.nethersmp.storm.utilities.modules.CommandsModule;
 import net.nethersmp.storm.utilities.modules.ListenerModule;
 
 import java.lang.reflect.Field;
-import java.util.Set;
 
 @RequiredArgsConstructor
 public class ModuleRegistry {
@@ -31,33 +32,45 @@ public class ModuleRegistry {
 
         commandsModule = new CommandsModule();
 
-        moduleLoader.register(new ModuleDefinition<>("commands", Set.of(), 1000, access -> commandsModule));
-        moduleLoader.register(new ModuleDefinition<>("listeners", Set.of(), 1000, access -> new ListenerModule(plugin)));
+        moduleLoader.register(new ModuleDefinition<>(CommandsModule.ID, CommandsModule.DEPENDENCIES, CommandsModule.PRIORITY, access -> commandsModule));
+        moduleLoader.register(new ModuleDefinition<>(ListenerModule.ID, ListenerModule.DEPENDENCIES, ListenerModule.PRIORITY, access -> new ListenerModule(plugin)));
+        moduleLoader.register(new ModuleDefinition<>(CooldownModule.ID, CooldownModule.DEPENDENCIES, CooldownModule.PRIORITY, moduleAccess -> new CooldownModule()));
 
-        moduleLoader.register(new ModuleDefinition<>("user_permissions",
-                Set.of("listeners"),
-                990,
-                access -> new UserPermissionsModule(access.require("listeners", ListenerModule.class))));
-        moduleLoader.register(new ModuleDefinition<>("user_ranks_loader",
-                Set.of(),
-                980,
+        moduleLoader.register(new ModuleDefinition<>(UserPermissionsModule.ID,
+                UserPermissionsModule.DEPENDENCIES,
+                UserPermissionsModule.PRIORITY,
+                access -> new UserPermissionsModule(access.require(ListenerModule.ID, ListenerModule.class))));
+
+        moduleLoader.register(new ModuleDefinition<>(RankLoaderModule.ID,
+                RankLoaderModule.DEPENDENCIES,
+                RankLoaderModule.PRIORITY,
                 access -> new RankLoaderModule(plugin.getDataPath().resolve("ranks.json"))));
 
-        moduleLoader.register(new ModuleDefinition<>("user_ranks_handler",
-                Set.of("user_ranks_loader", "listeners", "commands"),
-                970,
+        moduleLoader.register(new ModuleDefinition<>(RankHandlerModule.ID,
+                RankHandlerModule.DEPENDENCIES,
+                RankHandlerModule.PRIORITY,
                 access -> new RankHandlerModule(plugin,
-                        access.require("user_ranks_loader", RankLoaderModule.class),
-                        access.require("listeners", ListenerModule.class),
-                        access.require("commands", CommandsModule.class))));
+                        access.require(RankLoaderModule.ID, RankLoaderModule.class),
+                        access.require(ListenerModule.ID, ListenerModule.class),
+                        access.require(CommandsModule.ID, CommandsModule.class))));
 
         moduleLoader.register(new ModuleDefinition<>(UserPunishmentModule.ID,
                 UserPunishmentModule.DEPENDENCIES,
                 UserPunishmentModule.PRIORITY,
                 access -> new UserPunishmentModule(plugin,
-                        access.require("commands", CommandsModule.class),
-                        access.require("listeners", ListenerModule.class))));
+                        access.require(CommandsModule.ID, CommandsModule.class),
+                        access.require(ListenerModule.ID, ListenerModule.class))));
 
+        moduleLoader.register(new ModuleDefinition<>(
+                CratesModule.ID,
+                CratesModule.DEPENDENCIES,
+                CratesModule.PRIORITY,
+                access -> new CratesModule(plugin,
+                        access.require(CommandsModule.ID, CommandsModule.class),
+                        access.require(CooldownModule.ID, CooldownModule.class),
+                        access.require(ListenerModule.ID, ListenerModule.class),
+                        plugin.getDataPath().resolve("crates.json"))
+        ));
     }
 
 

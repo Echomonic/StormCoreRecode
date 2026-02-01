@@ -4,8 +4,9 @@ import dev.triumphteam.gui.builder.item.ItemBuilder;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.nethersmp.storm.crates.api.CrateData;
+import net.nethersmp.storm.utilities.Components;
 import net.nethersmp.storm.utilities.Strings;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -25,10 +26,10 @@ public class CrateItem {
         if (material == null) {
             return null;
         }
-
         return ItemBuilder.from(material)
-                .name(Component.text(Strings.fixCase(crate.name()), TextColor.fromHexString("#00ff6c")))
-                .lore(MiniMessage.miniMessage().deserialize(Strings.small("<gray>PLACE THIS <yellow>CRATE</yellow> DOWN AND\n<gray>PUT <aqua>ITEMS</aqua> IN IT.</gray>")))
+                .name(Component.text(Strings.fixCase(crate.name()), TextColor.fromHexString("#00ff6c")).decoration(TextDecoration.ITALIC, false))
+                .lore(Components.color(Strings.small("<gray>PLACE THIS <yellow>CRATE</yellow> DOWN AND")),
+                        Components.color(Strings.small("<gray>PUT <aqua>ITEMS</aqua> IN IT.</gray>")))
                 .setNbt("crate-id", crate.name())
                 .build();
     }

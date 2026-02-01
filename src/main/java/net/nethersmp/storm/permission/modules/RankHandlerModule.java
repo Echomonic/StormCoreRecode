@@ -13,13 +13,13 @@ import net.nethersmp.storm.StormPlugin;
 import net.nethersmp.storm.module.api.Module;
 import net.nethersmp.storm.module.api.Result;
 import net.nethersmp.storm.permission.UserRank;
+import net.nethersmp.storm.punishment.UserPunishment;
+import net.nethersmp.storm.punishment.UserPunishmentAccessor;
 import net.nethersmp.storm.user.data.UserDataType;
-import net.nethersmp.storm.user.data.UserPunishmentDataType;
 import net.nethersmp.storm.utilities.modules.CommandsModule;
 import net.nethersmp.storm.utilities.modules.ListenerModule;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.permissions.PermissionAttachment;
@@ -38,6 +38,12 @@ import static io.papermc.paper.command.brigadier.Commands.literal;
 @RequiredArgsConstructor
 public class RankHandlerModule implements Module<Void> {
 
+    public static final String ID = "user_ranks_handler";
+    public static final Set<String> DEPENDENCIES = Set.of("user_ranks_loader",
+            "commands",
+            "listeners");
+    public static final int PRIORITY = 980;
+
 
     private final StormPlugin plugin;
     private final RankLoaderModule rankLoader;
@@ -48,17 +54,17 @@ public class RankHandlerModule implements Module<Void> {
 
     @Override
     public String id() {
-        return "user_ranks_handler";
+        return ID;
     }
 
     @Override
     public Set<String> dependencies() {
-        return Set.of("user_ranks_loader", "listeners");
+        return DEPENDENCIES;
     }
 
     @Override
     public int priority() {
-        return 970;
+        return PRIORITY;
     }
 
     @Override
@@ -75,16 +81,16 @@ public class RankHandlerModule implements Module<Void> {
             Player player = event.getPlayer();
             removeRank(player);
         });
-        events.listen(id(), AsyncChatEvent.class, EventPriority.NORMAL, event -> {
+        events.listen(id(), AsyncChatEvent.class, event -> {
             if (event.isCancelled()) return;
             event.setCancelled(true);
-
             Player player = event.getPlayer();
-
-            //I don't know why I have to do this, Bukkit's event system is ass.
-            if (!UserPunishmentDataType.CURRENT_PUNISHMENT.get(player.getUniqueId()).isEmpty()) return;
-
             Component message = event.message();
+
+            Optional<UserPunishment> userPunishment = UserPunishmentAccessor.get(player.getUniqueId());
+            if (userPunishment.isPresent() && !userPunishment.get().duration().isOver())
+                return;
+
             getUserRank(player).ifPresent(userRank -> {
                 String prefix = userRank.prefix();
 

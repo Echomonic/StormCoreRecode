@@ -24,7 +24,7 @@ public class PlayerEvents implements Listener {
 
     private final StormPlugin plugin;
 
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.LOW)
     public void onLogin(AsyncPlayerPreLoginEvent event) {
         UUID player = event.getUniqueId();
         plugin.getUserDataAccessor().load(player);

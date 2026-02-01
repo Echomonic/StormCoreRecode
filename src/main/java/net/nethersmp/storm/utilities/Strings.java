@@ -2,6 +2,8 @@ package net.nethersmp.storm.utilities;
 
 import lombok.experimental.UtilityClass;
 
+import java.util.concurrent.TimeUnit;
+
 @UtilityClass
 public class Strings {
 
@@ -47,5 +49,27 @@ public class Strings {
         }
         return builder.toString().trim();
     }
+
+    public String date(long time) {
+        time -= System.currentTimeMillis();
+
+        var days = TimeUnit.MILLISECONDS.toDays(time);
+        var hours = TimeUnit.MILLISECONDS.toHours(time) % 24;
+        var minutes = TimeUnit.MILLISECONDS.toMinutes(time) % 60;
+        var seconds = TimeUnit.MILLISECONDS.toSeconds(time) % 60;
+
+        StringBuilder sb = new StringBuilder();
+
+        if (days > 0)
+            sb.append(days).append("d ");
+        if (hours > 0)
+            sb.append(hours).append("h ");
+        if (minutes > 0)
+            sb.append(minutes).append("m ");
+
+        sb.append(seconds).append("s");
+        return sb.toString();
+    }
+
 
 }

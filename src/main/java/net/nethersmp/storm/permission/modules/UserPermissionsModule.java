@@ -20,23 +20,27 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class UserPermissionsModule implements Module<Void> {
 
+    public static final String ID = "user_permissions";
+    public static final Set<String> DEPENDENCIES = Set.of(ListenerModule.ID);
+    public static final int PRIORITY = 990;
+
     private final ListenerModule events;
 
     private final ConcurrentHashMap<UUID, PermissibleBase> oldPlayerPermissions = new ConcurrentHashMap<>();
 
     @Override
     public String id() {
-        return "user_permissions";
+        return ID;
     }
 
     @Override
     public int priority() {
-        return 990;
+        return PRIORITY;
     }
 
     @Override
     public Set<String> dependencies() {
-        return Set.of("listeners");
+        return DEPENDENCIES;
     }
 
     @Override

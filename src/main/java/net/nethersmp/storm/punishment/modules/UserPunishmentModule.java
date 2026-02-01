@@ -19,16 +19,17 @@ import net.nethersmp.storm.punishment.api.PunishmentId;
 import net.nethersmp.storm.punishment.api.PunishmentReason;
 import net.nethersmp.storm.punishment.api.PunishmentType;
 import net.nethersmp.storm.user.data.UserPunishmentDataType;
+import net.nethersmp.storm.utilities.Dates;
+import net.nethersmp.storm.utilities.Strings;
 import net.nethersmp.storm.utilities.modules.CommandsModule;
 import net.nethersmp.storm.utilities.modules.ListenerModule;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
-import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 
 import java.text.MessageFormat;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static io.papermc.paper.command.brigadier.Commands.argument;
@@ -41,7 +42,7 @@ public class UserPunishmentModule implements Module<Void> {
 
     public static final String ID = "user_punishments";
     public static final Set<String> DEPENDENCIES = Set.of("commands", "listeners");
-    public static final int PRIORITY = 960;
+    public static final int PRIORITY = 970;
 
     private final StormPlugin plugin;
     private final CommandsModule commands;
@@ -49,7 +50,7 @@ public class UserPunishmentModule implements Module<Void> {
 
     @Override
     public Result<Void> load() {
-        events.listen(ID, AsyncChatEvent.class, EventPriority.HIGH, event -> {
+        events.listen(ID, AsyncChatEvent.class, EventPriority.LOW, event -> {
             Player player = event.getPlayer();
             UserPunishmentAccessor.get(player.getUniqueId()).ifPresent(punishment -> {
                 if (!punishment.type().isMute()) return;
@@ -58,13 +59,10 @@ public class UserPunishmentModule implements Module<Void> {
                     updatePunishments(player.getUniqueId(), punishment.id().text());
                     return;
                 }
-
                 event.setCancelled(true);
 
                 boolean permanent = punishment.type().isPermanent();
-
                 MiniMessage miniMessage = MiniMessage.miniMessage();
-
                 TextColor bodyColor = TextColor.fromHexString("#ff3b15");
 
                 long timeRemaining = punishment.duration().future() - System.currentTimeMillis();
@@ -72,25 +70,24 @@ public class UserPunishmentModule implements Module<Void> {
                 Component header = miniMessage.deserialize("<#ff0025>You have been muted!").appendNewline();
                 Component reason = miniMessage.deserialize("    <gray>Reason ▪ ").append(Component.text(punishment.reason().text(), bodyColor)).appendNewline();
                 Component duration = miniMessage.deserialize("    <gray>Duration ▪ ").append(
-                        Component.text(permanent ? "Forever" : formatDate(timeRemaining), bodyColor)
+                        Component.text(permanent ? "Forever" : Strings.date(timeRemaining), bodyColor)
                 ).appendNewline();
                 Component punishmentId = miniMessage.deserialize("    <gray>Id ▪ ").append(Component.text(punishment.id().text(), bodyColor));
 
                 player.sendMessage(header.append(reason).append(duration).append(punishmentId));
             });
         });
-        //This should be login, but bukkits event system.
-        events.listen(ID, PlayerJoinEvent.class, event -> {
-            Player player = event.getPlayer();
+        events.listen(ID, AsyncPlayerPreLoginEvent.class, event -> {
+            UUID player = event.getUniqueId();
 
-            UserPunishmentAccessor.get(player.getUniqueId()).ifPresent(punishment -> {
+            UserPunishmentAccessor.get(player).ifPresent(punishment -> {
                 if (!punishment.type().isBan()) return;
 
                 if (punishment.duration().isOver()) {
-                    updatePunishments(player.getUniqueId(), punishment.id().text());
+                    updatePunishments(player, punishment.id().text());
                     return;
                 }
-                player.kick(buildBanMessage(punishment));
+                event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, buildBanMessage(punishment));
             });
         });
 
@@ -137,7 +134,7 @@ public class UserPunishmentModule implements Module<Void> {
 
                     boolean permanent = duration.equalsIgnoreCase("perm");
 
-                    var future = permanent ? 0L : convertTimeSegment(duration);
+                    var future = permanent ? 0L : Dates.segment(duration);
 
                     PunishmentType punishmentType = PunishmentType.valueOf(MessageFormat.format("{0}_{1}",
                             permanent ? "PERMANENT" : "TEMPORARY",
@@ -149,7 +146,6 @@ public class UserPunishmentModule implements Module<Void> {
                             PunishmentReason.of(reason),
                             PunishmentDuration.of(future)
                     );
-
                     UserPunishmentAccessor.write(theirLoss);
                     UserPunishmentDataType.CURRENT_PUNISHMENT.set(target.getUniqueId(), theirLoss.id().text());
 
@@ -163,49 +159,13 @@ public class UserPunishmentModule implements Module<Void> {
         );
     }
 
-    private void updatePunishments(UUID player, String oldPunishmentId) {
+    public void updatePunishments(UUID player, String oldPunishmentId) {
         UserPunishmentDataType.CURRENT_PUNISHMENT.set(player, "");
 
         List<String> oldPunishments = UserPunishmentDataType.OLD_PUNISHMENTS.getOrDefault(player, new ArrayList<>());
         oldPunishments.add(oldPunishmentId);
 
         UserPunishmentDataType.OLD_PUNISHMENTS.set(player, oldPunishments);
-    }
-
-    private long convertTimeSegment(String timeSegment) {
-        String[] words = timeSegment.replace(" ", ",").split(",");
-        long years = 0L;
-        long months = 0L;
-        long days = 0L;
-        long hours = 0L;
-        long minutes = 0L;
-        long seconds = 0L;
-
-        for (String word : words) {
-            long num = Long.parseLong(word.substring(0, word.length() - 1));
-            char lastChar = word.charAt(word.length() - 1);
-            switch (lastChar) {
-                case 'y':
-                    years = num * 31557600000L;
-                    break;
-                case 'M':
-                    months = num * 2629800000L;
-                    break;
-                case 'd':
-                    days = num * 86400000L;
-                    break;
-                case 'h':
-                    hours = num * 3600000L;
-                    break;
-                case 'm':
-                    minutes = num * 60000L;
-                    break;
-                case 's':
-                    seconds = num * 1000L;
-                    break;
-            }
-        }
-        return System.currentTimeMillis() + (years + months + days + hours + minutes + seconds);
     }
 
     private Component buildBanMessage(UserPunishment punishment) {
@@ -221,20 +181,10 @@ public class UserPunishmentModule implements Module<Void> {
         Component header = miniMessage.deserialize("<#ff0025>You have been banned from this network.").appendNewline();
         Component reason = miniMessage.deserialize("<gray>Reason ▪ ").append(Component.text(punishment.reason().text(), bodyColor)).appendNewline();
         Component duration = miniMessage.deserialize("<gray>Duration ▪ ").append(
-                Component.text(permanent ? "Forever" : formatDate(timeRemaining), bodyColor)
+                Component.text(permanent ? "Forever" : Strings.date(timeRemaining), bodyColor)
         ).appendNewline();
 
         Component punishmentId = miniMessage.deserialize("<gray>Id ▪ ").append(Component.text(punishment.id().text(), bodyColor));
         return header.append(reason).append(duration).append(punishmentId);
-    }
-
-    private String formatDate(long time) {
-
-        var days = TimeUnit.MILLISECONDS.toDays(time);
-        var hours = TimeUnit.MILLISECONDS.toHours(time) % 24;
-        var minutes = TimeUnit.MILLISECONDS.toMinutes(time) % 60;
-        var seconds = TimeUnit.MILLISECONDS.toSeconds(time) % 60;
-
-        return MessageFormat.format("{0}d {1}h {2}m {3}s", days, hours, minutes, seconds);
     }
 }

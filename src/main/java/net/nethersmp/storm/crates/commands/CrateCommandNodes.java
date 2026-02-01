@@ -34,7 +34,7 @@ import static net.nethersmp.storm.brigadier.SetBrigadierSuggestion.keySuggestion
 @UtilityClass
 public class CrateCommandNodes {
 
-    private final Set<String> COLORS = Arrays.stream(Material.values()).filter(material -> material.name().endsWith("SHULKER_BOX")).map(filtered -> {
+    private final Set<String> COLORS = Arrays.stream(Material.values()).filter(material -> material.name().endsWith("SHULKER_BOX") && !material.isLegacy()).map(filtered -> {
         String name = filtered.name();
         if (name.equalsIgnoreCase("SHULKER_BOX")) return "none";
         return name.replace("_SHULKER_BOX", "").toLowerCase();
@@ -73,7 +73,7 @@ public class CrateCommandNodes {
                     }
                     playerInventory.addItem(crateItem);
 
-                    player.sendRichMessage("<gray><green>Successfully</green> crated the <yellow>" + Strings.fixCase(crateName) + " Crate</yellow>.");
+                    player.sendRichMessage("<gray><green>Successfully</green> created the <yellow>" + Strings.fixCase(crateName) + " Crate</yellow>.");
                     player.playSound(Sound.sound(Key.key("entity.experience_orb.pickup"), Sound.Source.MASTER, 1f, 2f));
                     storage.add(crateName, crateData);
                     player.updateCommands();
@@ -113,9 +113,18 @@ public class CrateCommandNodes {
                 .build();
     }
 
+    public LiteralCommandNode<CommandSourceStack> edit() {
+
+        return literal("edit").requires(source -> source.getSender().hasPermission("stormcore.crates.open.edit")).then(argument("crate-name", word()).executes(context -> {
+            CommandSender sender = context.getSource().getSender();
+            Bukkit.dispatchCommand(sender, "crates open %s true".formatted(getString(context, "crate-name")));
+            return 1;
+        })).build();
+    }
+
     public LiteralCommandNode<CommandSourceStack> give(CratesStorage storage) {
         return literal("give").requires(source -> source.getSender().hasPermission("stormcore.crates.give"))
-                .then(argument("crate-name", word()).executes(context -> {
+                .then(argument("crate-name", word()).suggests(keySuggestion(storage.keys())).executes(context -> {
                     CommandSourceStack source = context.getSource();
                     CommandSender sender = source.getSender();
 
@@ -140,15 +149,14 @@ public class CrateCommandNodes {
                     }
                     ItemStack crateItem = new CrateItem(crateData).toItemStack();
                     playerInventory.addItem(crateItem);
-                    player.sendRichMessage("<gray><green>Gave</green> you the <yellow>%s Crate</yellow> item.".formatted(crateName));
+                    player.sendRichMessage("<gray><green>Gave</green> you the <yellow>%s Crate</yellow> item.".formatted(Strings.fixCase(crateName)));
                     return 1;
                 })).build();
     }
 
     public LiteralCommandNode<CommandSourceStack> remove(CratesDataHandler handler, CratesStorage storage) {
 
-        return literal("delete").requires(source -> source.getSender().hasPermission("stormcore.crates.remove")).then(argument("crate-name", word()))
-                .executes(context -> {
+        return literal("delete").requires(source -> source.getSender().hasPermission("stormcore.crates.remove")).then(argument("crate-name", word()).suggests(keySuggestion(storage.keys())).executes(context -> {
                     CommandSourceStack source = context.getSource();
                     CommandSender sender = source.getSender();
 
@@ -162,16 +170,16 @@ public class CrateCommandNodes {
                         return 0;
                     }
                     if (handler.delete(crateData.name())) {
-                        sender.sendRichMessage("<green>Successfully</green> <red>deleted</red> <gray>the <yellow%s Crate</yellow>.".formatted(crateName));
+                        sender.sendRichMessage("<green>Successfully</green> <red>deleted</red> <gray>the <yellow>%s Crate</yellow>.".formatted(Strings.fixCase(crateName)));
                         sender.playSound(Sound.sound(Key.key("entity.experience_orb.pickup"), Sound.Source.MASTER, 1f, 2f));
                     } else {
-                        sender.sendRichMessage("<gray><red>Failed</red> to <red>delete</red> the <yellow%s Crate</yellow>. <dark_gray>(DOES NOT EXIST)".formatted(crateName));
+                        sender.sendRichMessage("<gray><red>Failed</red> to <red>delete</red> the <yellow>%s Crate</yellow>. <dark_gray>(DOES NOT EXIST)".formatted(Strings.fixCase(crateName)));
                         sender.playSound(Sound.sound(Key.key("entity.enderman.teleport"), Sound.Source.MASTER, 1f, 2f));
                     }
                     if (sender instanceof Player player)
                         player.updateCommands();
                     return 1;
-                })
+                }))
                 .build();
     }
 }
