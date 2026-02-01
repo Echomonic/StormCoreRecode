@@ -20,7 +20,7 @@ public class ModuleLoader implements ModuleAccess {
     ) {
     }
 
-    // ========= Storage =========
+    
     private final Map<String, ModuleDefinition<?>> defs = new HashMap<>();
     private final Map<String, net.nethersmp.storm.module.api.Module<?>> instances = new HashMap<>();
 
@@ -39,10 +39,6 @@ public class ModuleLoader implements ModuleAccess {
     private final List<String> loadOrder = new ArrayList<>();
 
     private boolean initialized;
-
-    // =========================
-    // Public API
-    // =========================
 
     public void register(ModuleDefinition<?> def) {
         ensureNotInitialized();
