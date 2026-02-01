@@ -38,7 +38,6 @@ public final class StormPlugin extends JavaPlugin {
 
         UserPunishmentAccessor.setPunishmentStorage(punishmentDataStore);
 
-
         moduleRegistry = new ModuleRegistry(this);
         moduleRegistry.register();
 

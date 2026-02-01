@@ -29,4 +29,8 @@ public class CratesStorage {
     public Set<Map.Entry<String, CrateData>> entries() {
         return crates.entrySet();
     }
+
+    public Set<String> keys() {
+        return crates.keySet();
+    }
 }

@@ -77,13 +77,14 @@ public class CratesDataHandler {
     }
 
     @SneakyThrows
-    public void delete(String id) {
+    public boolean delete(String id) {
         id = id.toLowerCase();
         storage.remove(id);
 
-        if (!root.has(id)) return;
+        if (!root.has(id)) return false;
         root.remove(id);
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(file.toFile(), root);
+        return true;
     }
 
     private void writeItems(CrateData crateData, ObjectNode crateNode) {
