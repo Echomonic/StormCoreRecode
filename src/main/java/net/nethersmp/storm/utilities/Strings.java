@@ -51,7 +51,6 @@ public class Strings {
     }
 
     public String date(long time) {
-        time -= System.currentTimeMillis();
 
         var days = TimeUnit.MILLISECONDS.toDays(time);
         var hours = TimeUnit.MILLISECONDS.toHours(time) % 24;

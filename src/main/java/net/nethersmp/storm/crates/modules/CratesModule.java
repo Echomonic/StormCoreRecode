@@ -2,14 +2,17 @@ package net.nethersmp.storm.crates.modules;
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
+import net.nethersmp.storm.StormPlugin;
 import net.nethersmp.storm.cooldown.CooldownModule;
 import net.nethersmp.storm.cooldown.api.UserCooldownRecord;
 import net.nethersmp.storm.crates.api.CrateData;
 import net.nethersmp.storm.crates.commands.CrateCommandNodes;
+import net.nethersmp.storm.crates.commands.KeyCommandNodes;
 import net.nethersmp.storm.crates.events.CrateKeySpendEvent;
 import net.nethersmp.storm.crates.storage.CratesDataHandler;
 import net.nethersmp.storm.crates.storage.CratesStorage;
 import net.nethersmp.storm.crates.ui.CrateUserInterface;
+import net.nethersmp.storm.crates.ui.SpinningCrateUserInterface;
 import net.nethersmp.storm.module.api.Module;
 import net.nethersmp.storm.module.api.Result;
 import net.nethersmp.storm.user.data.api.UserDataKey;
@@ -31,7 +34,6 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.plugin.Plugin;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -47,7 +49,7 @@ public class CratesModule implements Module<Void> {
     public static final Set<String> DEPENDENCIES = Set.of("commands", "cooldowns", "listeners");
     public static final int PRIORITY = 960;
 
-    private final Plugin plugin;
+    private final StormPlugin plugin;
     private final CommandsModule commands;
     private final ListenerModule events;
     private final CooldownModule cooldown;
@@ -55,7 +57,7 @@ public class CratesModule implements Module<Void> {
     private final CratesStorage storage;
 
 
-    public CratesModule(Plugin plugin, CommandsModule commands, CooldownModule cooldown, ListenerModule events, Path path) {
+    public CratesModule(StormPlugin plugin, CommandsModule commands, CooldownModule cooldown, ListenerModule events, Path path) {
         this.plugin = plugin;
         this.commands = commands;
         this.cooldown = cooldown;
@@ -75,6 +77,7 @@ public class CratesModule implements Module<Void> {
                 .then(CrateCommandNodes.remove(loader, storage))
                 .then(CrateCommandNodes.make(storage))
                 .then(CrateCommandNodes.give(storage))
+                .then(KeyCommandNodes.base())
                 .build());
 
         events.listen(ID, BlockPlaceEvent.class, event -> {
@@ -126,6 +129,8 @@ public class CratesModule implements Module<Void> {
             boolean sneaking = player.isSneaking();
             event.setCancelled(true);
 
+            PlayerInventory playerInventory = player.getInventory();
+
             switch (interactAction) {
                 case LEFT_CLICK_BLOCK:
                     if (player.getGameMode() == GameMode.CREATIVE && player.hasPermission("stormcore.crates.break") && sneaking) {
@@ -138,7 +143,7 @@ public class CratesModule implements Module<Void> {
                     new CrateUserInterface(loader, storage, crateData, false).open(player);
                     break;
                 case RIGHT_CLICK_BLOCK:
-                    PlayerInventory playerInventory = player.getInventory();
+
                     if (crateData.items().isEmpty()) {
                         player.sendRichMessage("<red>This crate doesn't have any times to give.");
                         return;
@@ -158,6 +163,14 @@ public class CratesModule implements Module<Void> {
                             return;
                         }
                         giveUserReward(playerInventory, crateData);
+                    } else {
+                        if (playerInventory.firstEmpty() == -1) {
+                            player.sendRichMessage("<red>You can't open this crate, your inventory is full!");
+                            return;
+                        }
+                        if (!events.call(new CrateKeySpendEvent(player, crateData))) return;
+
+                        new SpinningCrateUserInterface(plugin, crateData).open(player);
                     }
                     break;
             }

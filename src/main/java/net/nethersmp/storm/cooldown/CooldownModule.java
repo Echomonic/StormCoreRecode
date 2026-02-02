@@ -63,7 +63,7 @@ public class CooldownModule implements Module<Void> {
     public String getTimeLeft(UUID player, String id) {
         ConcurrentMap<String, Long> personCooldowns = userCooldowns.getOrDefault(player, new ConcurrentHashMap<>());
         Long cooldownMillis = personCooldowns.get(id);
-        return cooldownMillis == null ? null : Strings.date(cooldownMillis);
+        return cooldownMillis == null ? null : Strings.date(cooldownMillis - System.currentTimeMillis());
     }
 
 
