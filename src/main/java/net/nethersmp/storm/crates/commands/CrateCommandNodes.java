@@ -113,9 +113,9 @@ public class CrateCommandNodes {
                 .build();
     }
 
-    public LiteralCommandNode<CommandSourceStack> edit() {
+    public LiteralCommandNode<CommandSourceStack> edit(CratesStorage storage) {
 
-        return literal("edit").requires(source -> source.getSender().hasPermission("stormcore.crates.open.edit")).then(argument("crate-name", word()).executes(context -> {
+        return literal("edit").requires(source -> source.getSender().hasPermission("stormcore.crates.open.edit")).then(argument("crate-name", word()).suggests(keySuggestion(storage.keys())).executes(context -> {
             CommandSender sender = context.getSource().getSender();
             Bukkit.dispatchCommand(sender, "crates open %s true".formatted(getString(context, "crate-name")));
             return 1;

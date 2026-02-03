@@ -73,11 +73,11 @@ public class CratesModule implements Module<Void> {
 
         commands.register(literal("crates")
                 .then(CrateCommandNodes.open(loader, storage))
-                .then(CrateCommandNodes.edit())
+                .then(CrateCommandNodes.edit(storage))
                 .then(CrateCommandNodes.remove(loader, storage))
                 .then(CrateCommandNodes.make(storage))
                 .then(CrateCommandNodes.give(storage))
-                .then(KeyCommandNodes.base())
+                .then(KeyCommandNodes.base(storage))
                 .build());
 
         events.listen(ID, BlockPlaceEvent.class, event -> {
@@ -148,12 +148,12 @@ public class CratesModule implements Module<Void> {
                         player.sendRichMessage("<red>This crate doesn't have any times to give.");
                         return;
                     }
+                    if (playerInventory.firstEmpty() == -1) {
+                        player.sendRichMessage("<red>You can't open this crate, your inventory is full!");
+                        return;
+                    }
+                    if (!events.call(new CrateKeySpendEvent(player, crateData))) return;
                     if (sneaking) {
-                        if (playerInventory.firstEmpty() == -1) {
-                            player.sendRichMessage("<red>You can't open this crate, your inventory is full!");
-                            return;
-                        }
-                        if (!events.call(new CrateKeySpendEvent(player, crateData))) return;
 
                         if (!player.hasPermission("stormcore.crates.no-cooldown") && !cooldown.hasCooldown(player.getUniqueId(), "crates"))
                             cooldown.put(player.getUniqueId(), UserCooldownRecord.of("crates", "5s"));
@@ -164,12 +164,6 @@ public class CratesModule implements Module<Void> {
                         }
                         giveUserReward(playerInventory, crateData);
                     } else {
-                        if (playerInventory.firstEmpty() == -1) {
-                            player.sendRichMessage("<red>You can't open this crate, your inventory is full!");
-                            return;
-                        }
-                        if (!events.call(new CrateKeySpendEvent(player, crateData))) return;
-
                         new SpinningCrateUserInterface(plugin, crateData).open(player);
                     }
                     break;

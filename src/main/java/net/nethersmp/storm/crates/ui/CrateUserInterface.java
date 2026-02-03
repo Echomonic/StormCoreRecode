@@ -47,7 +47,6 @@ public class CrateUserInterface extends Gui {
                 modifiedItems.put(slot, item);
             }
             crateData.items(modifiedItems);
-            System.out.println(crateData.items());
             storage.add(crateData.name(), crateData);
 
             long time = System.currentTimeMillis();

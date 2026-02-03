@@ -4,6 +4,7 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
 import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
+import net.nethersmp.storm.crates.storage.CratesStorage;
 import net.nethersmp.storm.user.data.UserCrateKeyDataType;
 import net.nethersmp.storm.user.data.api.UserDataKey;
 import net.nethersmp.storm.utilities.Strings;
@@ -16,21 +17,22 @@ import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static io.papermc.paper.command.brigadier.Commands.argument;
 import static io.papermc.paper.command.brigadier.Commands.literal;
+import static net.nethersmp.storm.brigadier.SetBrigadierSuggestion.keySuggestion;
 
 public class KeyCommandNodes {
 
-    public static LiteralCommandNode<CommandSourceStack> base() {
+    public static LiteralCommandNode<CommandSourceStack> base(CratesStorage storage) {
 
         return literal("keys").requires(source -> source.getSender().hasPermission("stormcore.crates.keys"))
-                .then(get())
-                .then(set())
+                .then(get(storage))
+                .then(set(storage))
                 .build();
     }
 
-    private static LiteralCommandNode<CommandSourceStack> get() {
+    private static LiteralCommandNode<CommandSourceStack> get(CratesStorage storage) {
 
         return literal("get").requires(source -> source.getSender().hasPermission("stormcore.crates.keys.get"))
-                .then(argument("target", ArgumentTypes.player()).then(argument("key-type", word()).executes(context -> {
+                .then(argument("target", ArgumentTypes.player()).then(argument("key-type", word()).suggests(keySuggestion(storage.keys())).executes(context -> {
                     CommandSourceStack source = context.getSource();
                     CommandSender sender = source.getSender();
 
@@ -47,10 +49,10 @@ public class KeyCommandNodes {
                 }))).build();
     }
 
-    private static LiteralCommandNode<CommandSourceStack> set() {
+    private static LiteralCommandNode<CommandSourceStack> set(CratesStorage storage) {
 
         return literal("set").requires(source -> source.getSender().hasPermission("stormcore.crates.keys.set"))
-                .then(argument("target", ArgumentTypes.player()).then(argument("key-type", word()).then(argument("amount", integer())
+                .then(argument("target", ArgumentTypes.player()).then(argument("key-type", word()).suggests(keySuggestion(storage.keys())).then(argument("amount", integer())
                         .executes(context -> {
                             CommandSourceStack source = context.getSource();
                             CommandSender sender = source.getSender();

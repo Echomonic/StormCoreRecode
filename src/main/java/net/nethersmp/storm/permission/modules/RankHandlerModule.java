@@ -16,6 +16,7 @@ import net.nethersmp.storm.permission.UserRank;
 import net.nethersmp.storm.punishment.UserPunishment;
 import net.nethersmp.storm.punishment.UserPunishmentAccessor;
 import net.nethersmp.storm.user.data.UserDataType;
+import net.nethersmp.storm.utilities.Strings;
 import net.nethersmp.storm.utilities.modules.CommandsModule;
 import net.nethersmp.storm.utilities.modules.ListenerModule;
 import org.bukkit.command.CommandSender;
@@ -128,9 +129,7 @@ public class RankHandlerModule implements Module<Void> {
                         //Probably the most cursed thing I think I've seen in a while.
                         (appliedRank.failed() ? sender : target).sendMessage(appliedRank.toComponent());
 
-                    }, () -> {
-                        sender.sendRichMessage("<red>Failed</red> <gray>to <green>update</green> <yellow>%s's</yellow> rank!</gray>".formatted(target.getName()));
-                    });
+                    }, () -> sender.sendRichMessage("<red>Failed</red> <gray>to <green>update</green> <yellow>%s's</yellow> rank!</gray>".formatted(target.getName())));
 
                     return Command.SINGLE_SUCCESS;
                 })))
@@ -157,7 +156,13 @@ public class RankHandlerModule implements Module<Void> {
             }
             player.recalculatePermissions();
             player.updateCommands();
-            appliedRank.set(Result.success("<gray><green>Successfully</green> applied</gray> " + rank.getFormattedPrefix()));
+
+            String prefix = rank.getFormattedPrefix();
+
+            if (rank.prefix().isEmpty())
+                prefix = rank.getColor() + Strings.fixCase(UserDataType.RANK.get(player.getUniqueId())) + rank.getEndColor();
+
+            appliedRank.set(Result.success("<gray><green>Successfully</green> applied</gray> " + prefix));
         }, () -> appliedRank.set(Result.fail("RANKS", "Couldn't find '" + player.getUniqueId() + "' rank!")));
         return appliedRank.get();
     }

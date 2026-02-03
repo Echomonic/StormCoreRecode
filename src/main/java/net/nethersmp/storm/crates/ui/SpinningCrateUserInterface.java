@@ -5,7 +5,6 @@ import dev.triumphteam.gui.components.GuiContainer;
 import dev.triumphteam.gui.components.InteractionModifier;
 import dev.triumphteam.gui.components.util.Legacy;
 import dev.triumphteam.gui.guis.Gui;
-import dev.triumphteam.gui.guis.GuiItem;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
@@ -14,12 +13,10 @@ import net.nethersmp.storm.crates.CrateItem;
 import net.nethersmp.storm.crates.api.CrateData;
 import net.nethersmp.storm.utilities.Strings;
 import org.bukkit.Bukkit;
-import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,6 +49,8 @@ public class SpinningCrateUserInterface extends Gui {
         this.prize = possibleItems.get(ThreadLocalRandom.current().nextInt(possibleItems.size()));
         this.row = new ArrayList<>(possibleItems);
 
+        System.out.println(prize);
+
         int itemsCount = possibleItems.size();
 
         int half = (int) (double) (itemsCount / 2);
@@ -60,7 +59,10 @@ public class SpinningCrateUserInterface extends Gui {
         this.highSlot = (itemsCount > 7) ? 17 : (middle + half);
 
         getFiller().fill(ItemBuilder.from(CrateItem.getCrateClassColor(crateData)).asGuiItem());
-
+        setOpenGuiAction(event -> {
+            Player player = (Player) event.getPlayer();
+            spin(player);
+        });
         setCloseGuiAction(event -> {
             if (task == null) return;
             task.cancel();
@@ -69,16 +71,8 @@ public class SpinningCrateUserInterface extends Gui {
 
     }
 
-    @Override
-    public void open(@NotNull HumanEntity player) {
-        super.open(player);
-        spin((Player) player);
-    }
 
-    private void spin(Player player) {
-        player.playSound(Sound.sound(Key.key("block.note_block.harp"), Sound.Source.MASTER, 1f, 2f));
-        player.playSound(Sound.sound(Key.key("block.note_block.harp"), Sound.Source.MASTER, 1f, 1.5f));
-
+    public void spin(Player player) {
         this.task = new BukkitRunnable() {
             double delay = 0.0;
             int tick = 0;
@@ -100,19 +94,18 @@ public class SpinningCrateUserInterface extends Gui {
     }
 
     private void progressItems() {
+
         for (int rowSlot = lowSlot; rowSlot <= highSlot; rowSlot++) {
             ItemStack next = row.get((rowSlot + counter) % row.size());
-
-            setItem(rowSlot, ItemBuilder.from(next).asGuiItem());
+            getInventory().setItem(rowSlot, next);
         }
     }
 
     private void endCheck(Player player) {
         BukkitTask runningTask = task;
         if (runningTask == null) return;
-
-        GuiItem maybeCenter = getGuiItem(13);
-        if (counter >= 60 && maybeCenter != null && maybeCenter.getItemStack().isSimilar(prize)) {
+        ItemStack maybeCenter = getInventory().getItem(13);
+        if (counter >= 40 && maybeCenter.isSimilar(prize)) {
             runningTask.cancel();
             givePrize(player);
         }
